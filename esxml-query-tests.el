@@ -9,6 +9,12 @@
                  '((((wildcard))))))
   (should (equal (esxml-parse-css-selector "foo")
                  '((((tag . foo))))))
+  (should (equal (esxml-parse-css-selector "\\-bar")
+                 '((((tag . -bar))))))
+  (should (equal (esxml-parse-css-selector "foo\\.bar")
+                 '((((tag . foo.bar))))))
+  (should (equal (esxml-parse-css-selector "foo\\0030 bar")
+                 '((((tag . foo0bar))))))
   (should (equal (esxml-parse-css-selector "foo__bar--baz")
                  '((((tag . foo__bar--baz))))))
   (should-error (esxml-parse-css-selector "foo 123"))
@@ -128,6 +134,38 @@
                       (name . "foo")
                       (exact-match . "bar")))))))
   (should-error (esxml-parse-css-selector "[foo='bar]"))
+  (should (equal (esxml-parse-css-selector "[foo='bar\\\nbaz']")
+                 '((((attribute
+                      (name . "foo")
+                      (exact-match . "barbaz")))))))
+  (should (equal (esxml-parse-css-selector "[foo='bar\\.baz']")
+                 '((((attribute
+                      (name . "foo")
+                      (exact-match . "bar.baz")))))))
+  (should (equal (esxml-parse-css-selector "[foo='bar\\.baz']")
+                 '((((attribute
+                      (name . "foo")
+                      (exact-match . "bar.baz")))))))
+  (should (equal (esxml-parse-css-selector "[foo='bar\\ baz']")
+                 '((((attribute
+                      (name . "foo")
+                      (exact-match . "bar baz")))))))
+  (should (equal (esxml-parse-css-selector (format "[foo='bar\\20 baz']"))
+                 '((((attribute
+                      (name . "foo")
+                      (exact-match . "bar baz")))))))
+  (should (equal (esxml-parse-css-selector "[foo='bar\\0020 baz']")
+                 '((((attribute
+                      (name . "foo")
+                      (exact-match . "bar baz")))))))
+  (should (equal (esxml-parse-css-selector "[foo='bar\\000020baz']")
+                 '((((attribute
+                      (name . "foo")
+                      (exact-match . "bar baz")))))))
+  (should (equal (esxml-parse-css-selector "[foo='bar\\0000200baz']")
+                 '((((attribute
+                      (name . "foo")
+                      (exact-match . "bar 0baz")))))))
   (should (equal (esxml-parse-css-selector "[ foo = bar ]")
                  '((((attribute
                       (name . "foo")
@@ -146,6 +184,11 @@
                       (name . "foo")
                       (args
                        (ident . "bar"))))))))
+  (should (equal (esxml-parse-css-selector ":foo(b\\0030r)")
+                 '((((pseudo-class
+                      (name . "foo")
+                      (args
+                       (ident . "b0r"))))))))
   (should-error (esxml-parse-css-selector "::foo(bar)"))
   (should (equal (esxml-parse-css-selector ":foo(bar baz)")
                  '((((pseudo-class
@@ -163,6 +206,11 @@
                       (name . "foo")
                       (args
                        (dimension . "42rem"))))))))
+  (should (equal (esxml-parse-css-selector ":foo(42x\\0030)")
+                 '((((pseudo-class
+                      (name . "foo")
+                      (args
+                       (dimension . "42x0"))))))))
   (should (equal (esxml-parse-css-selector ":foo(2n+1)")
                  '((((pseudo-class
                       (name . "foo")
@@ -179,6 +227,14 @@
                        (operator . -)
                        (number . 1))))))))
   (should-error (esxml-parse-css-selector ":foo(bar")))
+
+(ert-deftest esxml-query-css-escape-test ()
+  (should (equal (esxml-query-css-escape "\0") "\ufffd"))
+  (should (equal (esxml-query-css-escape "\r\n") "\\d \\a "))
+  (should (equal (esxml-query-css-escape "-") "\\-"))
+  (should (equal (esxml-query-css-escape "-1") "-\\31 "))
+  (should (equal (esxml-query-css-escape "foo.bar") "foo\\.bar"))
+  (should (equal (esxml-query-css-escape "foo bar") "foo\\ bar")))
 
 (defvar esxml-query-document
   (xml-to-esxml
